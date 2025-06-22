@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>yt-dlp Pro Command Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Slate 900 */
+            color: #e2e8f0; /* Slate 200 */
+        }
+        .control-panel {
+            background-color: #1e293b; /* Slate 800 */
+            border: 1px solid #334155; /* Slate 700 */
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+        }
+        .command-block {
+            background-color: #0f172a; /* Slate 900 */
+            border: 1px solid #334155; /* Slate 700 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.3s;
+        }
+        .command-text {
+            color: #cbd5e1; /* Slate 300 */
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background-color: #334155; /* Slate 700 */
+            color: #e2e8f0; /* Slate 200 */
+            border: none;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .copy-btn:hover {
+            background-color: #475569; /* Slate 600 */
+        }
+        .copy-btn.copied {
+            background-color: #10B981;
+            color: white;
+        }
+        /* Custom Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .toggle-switch input { display:none; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #334155;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2563eb;
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+        /* Custom Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+            cursor: pointer;
+            width: 100%;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            background: #334155;
+            height: 0.5rem;
+            border-radius: 0.5rem;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            margin-top: -4px;
+            background-color: #2563eb;
+            height: 1.25rem;
+            width: 1.25rem;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-7xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-white">yt-dlp Command Generator</h1>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Left Side: Controls -->
+            <div class="control-panel space-y-6">
+                <div>
+                    <label for="youtubeLink" class="block mb-2 font-medium">YouTube URL</label>
+                    <input type="text" id="youtubeLink" placeholder="Paste video or playlist URL here..." class="w-full p-3 bg-slate-900 border border-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block mb-2 font-medium">Download Type</label>
+                        <select id="downloadType" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-md">
+                            <option value="audio">Audio Only</option>
+                            <option value="video">Video + Audio</option>
+                            <option value="video-only">Video Only</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="outputPath" class="block mb-2 font-medium">Output Path (Optional)</label>
+                        <input type="text" id="outputPath" placeholder="./downloads" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-md">
+                    </div>
+                </div>
+
+                <!-- Audio Settings -->
+                <div id="audioSettings" class="space-y-4 pt-4 border-t border-slate-700">
+                    <h3 class="text-xl font-semibold">Audio Settings</h3>
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div id="audioFormatContainer">
+                            <label class="block mb-2 font-medium">Audio Format</label>
+                            <select id="audioFormat" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-md">
+                                <option value="m4a">M4A (AAC)</option>
+                                <option value="mp3">MP3</option>
+                                <option value="opus">Opus (Best Quality)</option>
+                                <option value="flac">FLAC (Lossless)</option>
+                                <option value="wav">WAV (Lossless)</option>
+                            </select>
+                        </div>
+                        <div id="normalizationContainer">
+                            <label for="normalizationType" class="block mb-2 font-medium">Normalization</label>
+                            <select id="normalizationType" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-md">
+                                <option value="off">Off</option>
+                                <option value="dynaudnorm">Dynamic (for Car)</option>
+                                <option value="loudnorm">Loudness (for Playlist)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="audioQualityContainer">
+                        <label for="audioQuality" class="block mb-2 font-medium">Audio Quality <span id="audioQualityLabel" class="text-blue-400 font-mono">0 (Best VBR)</span></label>
+                        <input type="range" id="audioQuality" min="0" max="9" value="0" step="1" class="w-full">
+                    </div>
+                </div>
+
+                <!-- Video Settings -->
+                <div id="videoSettings" class="hidden space-y-4 pt-4 border-t border-slate-700">
+                    <h3 class="text-xl font-semibold">Video Settings</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block mb-2 font-medium">Video Format</label>
+                            <select id="videoFormat" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-md">
+                                <option value="mp4">MP4</option>
+                                <option value="mkv">MKV</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block mb-2 font-medium">Video Quality</label>
+                            <select id="videoQuality" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-md">
+                                <option value="best">Best Available</option>
+                                <option value="2160">4K (2160p)</option>
+                                <option value="1440">1440p</option>
+                                <option value="1080">1080p</option>
+                                <option value="720">720p</option>
+                                <option value="480">480p</option>
+                                <option value="360">360p</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                 <!-- Extra Options -->
+                <div class="pt-4 border-t border-slate-700 space-y-3">
+                    <h3 class="text-xl font-semibold">Extras</h3>
+                     <div class="flex items-center justify-between">
+                            <label for="embedMetadata" class="font-medium">Embed Metadata</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="embedMetadata" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                         <div class="flex items-center justify-between">
+                            <label for="embedThumbnail" class="font-medium">Embed Thumbnail</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="embedThumbnail" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <label for="keepOriginal" class="font-medium">Keep Original File</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="keepOriginal">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Output -->
+            <div class="space-y-6">
+                <div id="singleVideoCommands">
+                    <h2 class="text-2xl font-semibold mb-2">Single Video Command</h2>
+                    <div class="command-block">
+                        <pre><code id="singleCommand" class="command-text">Enter a URL to begin...</code></pre>
+                        <button class="copy-btn" onclick="copyToClipboard('singleCommand', this)">Copy</button>
+                    </div>
+                </div>
+                <div id="playlistCommands">
+                    <h2 class="text-2xl font-semibold mb-2">Playlist Command</h2>
+                    <div class="command-block">
+                        <pre><code id="playlistCommand" class="command-text">Enter a URL to begin...</code></pre>
+                        <button class="copy-btn" onclick="copyToClipboard('playlistCommand', this)">Copy</button>
+                    </div>
+                </div>
+                 <!-- Error Message -->
+                <div id="errorMessage" class="hidden text-center text-red-400 mt-8 p-4 bg-red-900/50 border border-red-700 rounded-md">
+                    <p>Please enter a valid YouTube URL.</p>
+                </div>
+            </div>
+
+             <!-- Information Section -->
+            <div class="lg:col-span-2 mt-8">
+                <div class="control-panel">
+                    <h2 class="text-2xl font-bold mb-4 border-b border-slate-700 pb-2">About The Tool & Options</h2>
+                    <div class="space-y-6 text-slate-300">
+                        <div>
+                            <h3 class="text-xl font-semibold text-white mb-2">What is this tool?</h3>
+                            <p>This generator helps you create commands for <code class="bg-slate-900 px-1 rounded">yt-dlp</code>, a command-line tool for downloading video and audio from yt.</p>
+                        </div>
+
+                        <div>
+                            <h3 class="text-xl font-semibold text-white mb-2">Download Options Explained</h3>
+                            <ul class="list-disc list-inside space-y-3">
+                                <li><strong>Download Type:</strong> Choose what you want to grab. "Audio Only" is for music/podcasts. "Video + Audio" downloads a standard video file. "Video Only" is for getting silent clips.</li>
+                                <li><strong>Audio Format:</strong> Select the file type for your audio. <code class="bg-slate-900 px-1 rounded">M4A</code> and <code class="bg-slate-900 px-1 rounded">MP3</code> are best for compatibility. <code class="bg-slate-900 px-1 rounded">Opus</code> often provides the best quality at a smaller size. <code class="bg-slate-900 px-1 rounded">FLAC</code> and <code class="bg-slate-900 px-1 rounded">WAV</code> are lossless, meaning perfect quality but very large files.</li>
+                                <li><strong>Normalization:</strong> This fixes inconsistent volume levels between different songs.
+                                    <ul class="list-['-_'] list-inside ml-4 mt-2 space-y-2">
+                                        <li><strong>Dynamic (dynaudnorm):</strong> Best for noisy environments (like a car). It makes quiet parts louder and loud parts quieter, so you don't have to touch the volume knob. It changes the song's internal dynamics.</li>
+                                        <li><strong>Loudness (loudnorm):</strong> Best for creating a consistent playlist for home listening. It adjusts each song's overall perceived loudness to a standard level while preserving the original dynamics within the song. The settings used here (<code class="bg-slate-900 px-1 rounded">I=-16:TP=-1.5:LRA=11</code>) are optimized for modern music listening, matching standards used by services like Apple Music and Spotify.
+                                            <ul class="list-['•'] list-inside ml-6 mt-1 text-slate-400">
+                                                <li><code class="bg-slate-900 px-1 rounded">I=-16</code> sets the target average loudness to -16 LUFS (Loudness Units Full Scale), a modern standard for music.</li>
+                                                <li><code class="bg-slate-900 px-1 rounded">TP=-1.5</code> sets the maximum true peak to -1.5 dB, leaving headroom to prevent clipping after encoding.</li>
+                                                <li><code class="bg-slate-900 px-1 rounded">LRA=11</code> allows for a healthy dynamic range, so the music doesn't sound overly compressed.</li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
+                                <li><strong>Video Format:</strong> Choose the container for your video file. <code class="bg-slate-900 px-1 rounded">MP4</code> is universally compatible. <code class="bg-slate-900 px-1 rounded">MKV</code> is more flexible and can hold more types of data, like multiple audio tracks or subtitles.</li>
+                                <li><strong>Embed Metadata/Thumbnail:</strong> Turning these on will save information like the song title, artist, and album art directly into the file, which is essential for organizing a music library.</li>
+                                <li><strong>Keep Original File (-k):</strong> If enabled, `yt-dlp` will not delete the intermediate files (like the separate video and audio streams it downloads before merging). This is useful for debugging if something goes wrong.</li>
+                                <li><strong>Output Path:</strong> Lets you specify a folder where your files will be saved, for example <code class="bg-slate-900 px-1 rounded">C:\Users\YourName\Music</code>.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- DOM Element Selection ---
+        const controls = {
+            youtubeLink: document.getElementById('youtubeLink'),
+            downloadType: document.getElementById('downloadType'),
+            outputPath: document.getElementById('outputPath'),
+            audioFormat: document.getElementById('audioFormat'),
+            normalizationType: document.getElementById('normalizationType'),
+            audioQuality: document.getElementById('audioQuality'),
+            audioQualityLabel: document.getElementById('audioQualityLabel'),
+            videoFormat: document.getElementById('videoFormat'),
+            videoQuality: document.getElementById('videoQuality'),
+            embedMetadata: document.getElementById('embedMetadata'),
+            embedThumbnail: document.getElementById('embedThumbnail'),
+            keepOriginal: document.getElementById('keepOriginal'),
+        };
+
+        const ui = {
+            audioSettings: document.getElementById('audioSettings'),
+            videoSettings: document.getElementById('videoSettings'),
+            audioFormatContainer: document.getElementById('audioFormatContainer'),
+            normalizationContainer: document.getElementById('normalizationContainer'),
+            audioQualityContainer: document.getElementById('audioQualityContainer'),
+            singleCommandEl: document.getElementById('singleCommand'),
+            playlistCommandEl: document.getElementById('playlistCommand'),
+            errorMessageDiv: document.getElementById('errorMessage'),
+            singleCommandBlock: document.getElementById('singleVideoCommands').querySelector('.command-block'),
+            playlistCommandBlock: document.getElementById('playlistCommands').querySelector('.command-block')
+        };
+        
+        // --- Event Listeners ---
+        Object.values(controls).forEach(control => {
+            control.addEventListener('input', generateCommands);
+            control.addEventListener('change', generateCommands);
+        });
+        
+        // --- Functions ---
+        
+        function generateCommands() {
+            updateUIVisibility();
+
+            const url = controls.youtubeLink.value.trim();
+            if (!url) {
+                ui.singleCommandEl.textContent = 'Enter a URL to begin...';
+                ui.playlistCommandEl.textContent = 'Enter a URL to begin...';
+                return;
+            }
+            if (!url.includes('youtube.com/') && !url.includes('youtu.be/')) {
+                ui.errorMessageDiv.classList.remove('hidden');
+                ui.singleCommandEl.textContent = 'Invalid URL.';
+                ui.playlistCommandEl.textContent = 'Invalid URL.';
+                return;
+            }
+            
+            ui.errorMessageDiv.classList.add('hidden');
+
+            const settings = getSettings();
+            
+            const singleCommand = buildCommand(settings, false);
+            const playlistCommand = buildCommand(settings, true);
+
+            ui.singleCommandEl.textContent = singleCommand;
+            ui.playlistCommandEl.textContent = playlistCommand;
+
+            highlightRelevantBlock(url);
+        }
+
+        function getSettings() {
+            return {
+                url: controls.youtubeLink.value.trim(),
+                downloadType: controls.downloadType.value,
+                outputPath: controls.outputPath.value.trim(),
+                audioFormat: controls.audioFormat.value,
+                normalizationType: controls.normalizationType.value,
+                audioQuality: controls.audioQuality.value,
+                videoFormat: controls.videoFormat.value,
+                videoQuality: controls.videoQuality.value,
+                embedMetadata: controls.embedMetadata.checked,
+                embedThumbnail: controls.embedThumbnail.checked,
+                keepOriginal: controls.keepOriginal.checked,
+            };
+        }
+
+        function buildCommand(settings, isPlaylist) {
+            let command = ['yt-dlp'];
+            const downloadType = settings.downloadType;
+            const normalizationType = settings.normalizationType;
+
+            if (downloadType === 'audio') {
+                command.push('-x');
+                command.push(`--audio-format ${settings.audioFormat}`);
+                if (['mp3', 'opus', 'm4a'].includes(settings.audioFormat)) {
+                     command.push(`--audio-quality ${settings.audioQuality}`);
+                }
+                if (normalizationType !== 'off') {
+                    let codec;
+                    let qualityArg = '';
+                    switch (settings.audioFormat) {
+                        case 'm4a': 
+                            codec = 'aac'; 
+                            qualityArg = '-b:a 320k';
+                            break;
+                        case 'mp3': 
+                            codec = 'libmp3lame'; 
+                            qualityArg = `-q:a ${settings.audioQuality}`;
+                            break;
+                        case 'opus': 
+                            codec = 'libopus'; 
+                            qualityArg = '-b:a 256k';
+                            break;
+                        case 'flac': codec = 'flac'; break;
+                        case 'wav': codec = 'pcm_s16le'; break;
+                        default: codec = 'aac';
+                    }
+                    
+                    let filter;
+                    if (normalizationType === 'dynaudnorm') {
+                        filter = 'dynaudnorm';
+                    } else if (normalizationType === 'loudnorm') {
+                        filter = 'loudnorm=I=-16:TP=-1.5:LRA=11';
+                    }
+                    
+                    // Add aresample to fix the sample rate issue after normalization
+                    let finalFilter = `'${filter},aresample=48000'`;
+                    command.push(`--ppa "ffmpeg:-c:a ${codec} ${qualityArg} -af ${finalFilter}"`);
+                }
+            } else if (downloadType === 'video') { // Video + Audio
+                let vformat_ext = settings.videoFormat;
+                let aformat_ext = settings.audioFormat;
+
+                let formatStr = `bestvideo[ext=${vformat_ext}]`;
+                if (settings.videoQuality !== 'best') {
+                    formatStr += `[height<=${settings.videoQuality}]`;
+                }
+                formatStr += `+bestaudio[ext=${aformat_ext}]`;
+                
+                // Fallbacks
+                formatStr += `/bestvideo[ext=${vformat_ext}]`;
+                if (settings.videoQuality !== 'best') {
+                    formatStr += `[height<=${settings.videoQuality}]`;
+                }
+                formatStr += `+bestaudio/best`;
+                
+                command.push(`-f "${formatStr}"`);
+                command.push(`--merge-output-format ${vformat_ext}`);
+            } else if (downloadType === 'video-only') {
+                 let vformat_ext = settings.videoFormat;
+                let formatStr = `bestvideo[ext=${vformat_ext}]`;
+                if (settings.videoQuality !== 'best') {
+                    formatStr += `[height<=${settings.videoQuality}]`;
+                }
+                formatStr += `/bestvideo`; // Fallback
+                command.push(`-f "${formatStr}"`);
+            }
+            
+            if (settings.keepOriginal) command.push('-k');
+            if (settings.embedMetadata) command.push('--embed-metadata');
+            // Thumbnail is only relevant for audio or merged video/audio
+            if (settings.embedThumbnail && downloadType !== 'video-only') command.push('--embed-thumbnail');
+
+            // Output template
+            let outputPath = settings.outputPath || '.';
+            let fileName = isPlaylist 
+                ? `%(playlist_title)s/%(playlist_index)s - %(title)s.%(ext)s`
+                : `%(title)s.%(ext)s`;
+            
+            // Handle trailing slashes for path
+            if (outputPath.endsWith('/') || outputPath.endsWith('\\')) {
+                 command.push(`-o "${outputPath}${fileName}"`);
+            } else {
+                 command.push(`-o "${outputPath}/${fileName}"`);
+            }
+           
+            let urlToUse = settings.url;
+             if (!isPlaylist && urlToUse.includes('&list=')) {
+                urlToUse = urlToUse.split('&list=')[0];
+            }
+            command.push(`"${urlToUse}"`);
+
+            return command.join(' ');
+        }
+        
+        function updateUIVisibility() {
+            const downloadType = controls.downloadType.value;
+
+            // Default states
+            ui.audioSettings.classList.add('hidden');
+            ui.videoSettings.classList.add('hidden');
+            // Sub-components of audioSettings
+            ui.normalizationContainer.classList.add('hidden');
+            ui.audioQualityContainer.classList.add('hidden');
+            ui.audioFormatContainer.classList.add('hidden');
+
+            if (downloadType === 'audio') {
+                ui.audioSettings.classList.remove('hidden');
+                ui.normalizationContainer.classList.remove('hidden');
+                ui.audioQualityContainer.classList.remove('hidden');
+                ui.audioFormatContainer.classList.remove('hidden');
+            } else if (downloadType === 'video') { // Video + Audio
+                ui.videoSettings.classList.remove('hidden');
+                ui.audioSettings.classList.remove('hidden');
+                ui.audioFormatContainer.classList.remove('hidden'); // Allow choosing audio format to merge
+            } else if (downloadType === 'video-only') {
+                ui.videoSettings.classList.remove('hidden');
+            }
+            
+            // Always update the label
+            controls.audioQualityLabel.textContent = `${controls.audioQuality.value} (${controls.audioQuality.value == 0 ? 'Best' : 'Lower'} VBR)`;
+        }
+
+        function highlightRelevantBlock(url) {
+            const isPlaylist = url.includes('playlist?list=');
+            ui.singleCommandBlock.style.borderColor = isPlaylist ? '#334155' : '#2563eb';
+            ui.playlistCommandBlock.style.borderColor = isPlaylist ? '#2563eb' : '#334155';
+        }
+
+        function copyToClipboard(elementId, button) {
+            const codeToCopy = document.getElementById(elementId).innerText;
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(codeToCopy);
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = codeToCopy;
+                textarea.style.position = 'absolute';
+                textarea.style.left = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                } catch (err) {
+                    console.error('Fallback copy failed', err);
+                }
+                document.body.removeChild(textarea);
+            }
+
+            // Visual feedback
+            button.textContent = 'Copied!';
+            button.classList.add('copied');
+            setTimeout(() => {
+                button.textContent = 'Copy';
+                button.classList.remove('copied');
+            }, 2000);
+        }
+
+        // Initial state
+        generateCommands();
+
+    </script>
+</body>
+</html>
