@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>yt-dlp Pro Command Generator</title>
+    <title>yt-dlp Command Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
@@ -110,6 +110,13 @@
             width: 1.25rem;
             border-radius: 50%;
         }
+        select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        input[type=range]:disabled::-webkit-slider-thumb {
+            background-color: #475569;
+        }
     </style>
 </head>
 <body class="text-white">
@@ -149,11 +156,10 @@
                         <div id="audioFormatContainer">
                             <label class="block mb-2 font-medium">Audio Format</label>
                             <select id="audioFormat" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-md">
+                                <option value="best">Original (Best Available)</option>
                                 <option value="m4a">M4A (AAC)</option>
                                 <option value="mp3">MP3</option>
-                                <option value="opus">Opus (Best Quality)</option>
-                                <option value="flac">FLAC (Lossless)</option>
-                                <option value="wav">WAV (Lossless)</option>
+                                <option value="opus">Opus</option>
                             </select>
                         </div>
                         <div id="normalizationContainer">
@@ -252,15 +258,15 @@
                     <div class="space-y-6 text-slate-300">
                         <div>
                             <h3 class="text-xl font-semibold text-white mb-2">What is this tool?</h3>
-                            <p>This generator helps you create commands for <code class="bg-slate-900 px-1 rounded">yt-dlp</code>, a command-line tool for downloading video and audio from yt.</p>
+                            <p>This generator helps you create commands for yt-dlp, a command-line tool for downloading video and audio from yt.</p>
                         </div>
 
                         <div>
                             <h3 class="text-xl font-semibold text-white mb-2">Download Options Explained</h3>
                             <ul class="list-disc list-inside space-y-3">
                                 <li><strong>Download Type:</strong> Choose what you want to grab. "Audio Only" is for music/podcasts. "Video + Audio" downloads a standard video file. "Video Only" is for getting silent clips.</li>
-                                <li><strong>Audio Format:</strong> Select the file type for your audio. <code class="bg-slate-900 px-1 rounded">M4A</code> and <code class="bg-slate-900 px-1 rounded">MP3</code> are best for compatibility. <code class="bg-slate-900 px-1 rounded">Opus</code> often provides the best quality at a smaller size. <code class="bg-slate-900 px-1 rounded">FLAC</code> and <code class="bg-slate-900 px-1 rounded">WAV</code> are lossless, meaning perfect quality but very large files.</li>
-                                <li><strong>Normalization:</strong> This fixes inconsistent volume levels between different songs.
+                                <li><strong>Audio Format:</strong> Select the file type for your audio. <code class="bg-slate-900 px-1 rounded">Original (Best Available)</code> downloads the native audio stream without re-encoding, preserving the highest possible quality. <code class="bg-slate-900 px-1 rounded">M4A</code> and <code class="bg-slate-900 px-1 rounded">MP3</code> are best for compatibility. <code class="bg-slate-900 px-1 rounded">Opus</code> often provides great quality at a smaller size.</li>
+                                <li><strong>Normalization:</strong> This fixes inconsistent volume levels between different songs. It requires re-encoding, so it cannot be used with the "Original" audio format.
                                     <ul class="list-['-_'] list-inside ml-4 mt-2 space-y-2">
                                         <li><strong>Dynamic (dynaudnorm):</strong> Best for noisy environments (like a car). It makes quiet parts louder and loud parts quieter, so you don't have to touch the volume knob. It changes the song's internal dynamics.</li>
                                         <li><strong>Loudness (loudnorm):</strong> Best for creating a consistent playlist for home listening. It adjusts each song's overall perceived loudness to a standard level while preserving the original dynamics within the song. The settings used here (<code class="bg-slate-900 px-1 rounded">I=-16:TP=-1.5:LRA=11</code>) are optimized for modern music listening, matching standards used by services like Apple Music and Spotify.
@@ -378,7 +384,7 @@
                 if (['mp3', 'opus', 'm4a'].includes(settings.audioFormat)) {
                      command.push(`--audio-quality ${settings.audioQuality}`);
                 }
-                if (normalizationType !== 'off') {
+                if (normalizationType !== 'off' && settings.audioFormat !== 'best') {
                     let codec;
                     let qualityArg = '';
                     switch (settings.audioFormat) {
@@ -468,6 +474,7 @@
         
         function updateUIVisibility() {
             const downloadType = controls.downloadType.value;
+            const isBestFormat = controls.audioFormat.value === 'best';
 
             // Default states
             ui.audioSettings.classList.add('hidden');
@@ -482,6 +489,15 @@
                 ui.normalizationContainer.classList.remove('hidden');
                 ui.audioQualityContainer.classList.remove('hidden');
                 ui.audioFormatContainer.classList.remove('hidden');
+
+                if (isBestFormat) {
+                    controls.normalizationType.value = 'off';
+                    controls.normalizationType.disabled = true;
+                    ui.audioQualityContainer.classList.add('hidden');
+                } else {
+                    controls.normalizationType.disabled = false;
+                    ui.audioQualityContainer.classList.remove('hidden');
+                }
             } else if (downloadType === 'video') { // Video + Audio
                 ui.videoSettings.classList.remove('hidden');
                 ui.audioSettings.classList.remove('hidden');
