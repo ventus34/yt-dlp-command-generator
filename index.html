@@ -110,7 +110,7 @@
             width: 1.25rem;
             border-radius: 50%;
         }
-        select:disabled {
+        select:disabled, input:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
@@ -146,6 +146,21 @@
                     <div>
                         <label for="outputPath" class="block mb-2 font-medium">Output Path (Optional)</label>
                         <input type="text" id="outputPath" placeholder="./downloads" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-md">
+                    </div>
+                </div>
+
+                <!-- Playlist Settings -->
+                <div id="playlistSettings" class="hidden space-y-4 pt-4 border-t border-slate-700">
+                    <h3 class="text-xl font-semibold">Playlist Settings</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="playlistStart" class="block mb-2 font-medium">Start at item #</label>
+                            <input type="number" id="playlistStart" placeholder="e.g., 1" min="1" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-md">
+                        </div>
+                        <div>
+                            <label for="playlistEnd" class="block mb-2 font-medium">End at item #</label>
+                            <input type="number" id="playlistEnd" placeholder="e.g., 10" min="1" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-md">
+                        </div>
                     </div>
                 </div>
 
@@ -231,14 +246,14 @@
 
             <!-- Right Side: Output -->
             <div class="space-y-6">
-                <div id="singleVideoCommands">
+                <div id="singleVideoCommands" class="hidden">
                     <h2 class="text-2xl font-semibold mb-2">Single Video Command</h2>
                     <div class="command-block">
                         <pre><code id="singleCommand" class="command-text">Enter a URL to begin...</code></pre>
                         <button class="copy-btn" onclick="copyToClipboard('singleCommand', this)">Copy</button>
                     </div>
                 </div>
-                <div id="playlistCommands">
+                <div id="playlistCommands" class="hidden">
                     <h2 class="text-2xl font-semibold mb-2">Playlist Command</h2>
                     <div class="command-block">
                         <pre><code id="playlistCommand" class="command-text">Enter a URL to begin...</code></pre>
@@ -305,19 +320,22 @@
             embedMetadata: document.getElementById('embedMetadata'),
             embedThumbnail: document.getElementById('embedThumbnail'),
             keepOriginal: document.getElementById('keepOriginal'),
+            playlistStart: document.getElementById('playlistStart'),
+            playlistEnd: document.getElementById('playlistEnd'),
         };
 
         const ui = {
             audioSettings: document.getElementById('audioSettings'),
             videoSettings: document.getElementById('videoSettings'),
+            playlistSettings: document.getElementById('playlistSettings'),
             audioFormatContainer: document.getElementById('audioFormatContainer'),
             normalizationContainer: document.getElementById('normalizationContainer'),
             audioQualityContainer: document.getElementById('audioQualityContainer'),
             singleCommandEl: document.getElementById('singleCommand'),
             playlistCommandEl: document.getElementById('playlistCommand'),
             errorMessageDiv: document.getElementById('errorMessage'),
-            singleCommandBlock: document.getElementById('singleVideoCommands').querySelector('.command-block'),
-            playlistCommandBlock: document.getElementById('playlistCommands').querySelector('.command-block')
+            singleVideoCommands: document.getElementById('singleVideoCommands'),
+            playlistCommands: document.getElementById('playlistCommands'),
         };
         
         // --- Event Listeners ---
@@ -335,6 +353,8 @@
             if (!url) {
                 ui.singleCommandEl.textContent = 'Enter a URL to begin...';
                 ui.playlistCommandEl.textContent = 'Enter a URL to begin...';
+                ui.singleVideoCommands.classList.add('hidden');
+                ui.playlistCommands.classList.add('hidden');
                 return;
             }
             if (!url.includes('youtube.com/') && !url.includes('youtu.be/')) {
@@ -354,7 +374,7 @@
             ui.singleCommandEl.textContent = singleCommand;
             ui.playlistCommandEl.textContent = playlistCommand;
 
-            highlightRelevantBlock(url);
+            updateOutputVisibility(url);
         }
 
         function getSettings() {
@@ -370,6 +390,8 @@
                 embedMetadata: controls.embedMetadata.checked,
                 embedThumbnail: controls.embedThumbnail.checked,
                 keepOriginal: controls.keepOriginal.checked,
+                playlistStart: controls.playlistStart.value,
+                playlistEnd: controls.playlistEnd.value,
             };
         }
 
@@ -377,6 +399,11 @@
             let command = ['yt-dlp'];
             const downloadType = settings.downloadType;
             const normalizationType = settings.normalizationType;
+            
+            if (isPlaylist) {
+                if (settings.playlistStart) command.push(`--playlist-start ${settings.playlistStart}`);
+                if (settings.playlistEnd) command.push(`--playlist-end ${settings.playlistEnd}`);
+            }
 
             if (downloadType === 'audio') {
                 command.push('-x');
@@ -400,8 +427,6 @@
                             codec = 'libopus'; 
                             qualityArg = '-b:a 256k';
                             break;
-                        case 'flac': codec = 'flac'; break;
-                        case 'wav': codec = 'pcm_s16le'; break;
                         default: codec = 'aac';
                     }
                     
@@ -473,16 +498,23 @@
         }
         
         function updateUIVisibility() {
+            const url = controls.youtubeLink.value.trim();
+            const isPlaylist = url.includes('playlist?list=');
             const downloadType = controls.downloadType.value;
             const isBestFormat = controls.audioFormat.value === 'best';
 
             // Default states
             ui.audioSettings.classList.add('hidden');
             ui.videoSettings.classList.add('hidden');
+            ui.playlistSettings.classList.add('hidden');
             // Sub-components of audioSettings
             ui.normalizationContainer.classList.add('hidden');
             ui.audioQualityContainer.classList.add('hidden');
             ui.audioFormatContainer.classList.add('hidden');
+
+            if (isPlaylist) {
+                ui.playlistSettings.classList.remove('hidden');
+            }
 
             if (downloadType === 'audio') {
                 ui.audioSettings.classList.remove('hidden');
@@ -510,10 +542,10 @@
             controls.audioQualityLabel.textContent = `${controls.audioQuality.value} (${controls.audioQuality.value == 0 ? 'Best' : 'Lower'} VBR)`;
         }
 
-        function highlightRelevantBlock(url) {
+        function updateOutputVisibility(url) {
             const isPlaylist = url.includes('playlist?list=');
-            ui.singleCommandBlock.style.borderColor = isPlaylist ? '#334155' : '#2563eb';
-            ui.playlistCommandBlock.style.borderColor = isPlaylist ? '#2563eb' : '#334155';
+            ui.singleVideoCommands.classList.toggle('hidden', isPlaylist);
+            ui.playlistCommands.classList.toggle('hidden', !isPlaylist);
         }
 
         function copyToClipboard(elementId, button) {
